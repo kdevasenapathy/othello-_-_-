@@ -22,6 +22,7 @@ public:
     Board *copy();
 
     bool isDone();
+    bool publicGet(Side side, int x, int y);
     bool hasMoves(Side side);
     bool checkMove(Move *m, Side side);
     void doMove(Move *m, Side side);

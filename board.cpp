@@ -45,6 +45,11 @@ bool Board::onBoard(int x, int y) {
     return(0 <= x && x < 8 && 0 <= y && y < 8);
 }
 
+bool Board::publicGet(Side side, int x, int y)
+{
+    return get(side, x, y);
+}
+
 
 /*
  * Returns true if the game is finished; false otherwise. The game is finished

@@ -6,12 +6,15 @@
 #include "board.hpp"
 #include <cstdlib>
 #include <vector>
+#define ENDGAME 1000000
 using namespace std;
 
 class Player {
 private:
 	Board* boardState;
 	Side ourSide;
+	int calculateWeight(int x, int y);
+	int calculateBoard(Move* move);
 
 public:
     Player(Side side);

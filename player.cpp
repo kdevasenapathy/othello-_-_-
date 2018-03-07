@@ -47,7 +47,7 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
      * process the opponent's opponents move before calculating your own move
      */
     vector<Move*> possible;
-
+    
     if (opponentsMove != nullptr)
     {
         Side other = (ourSide == BLACK) ? WHITE : BLACK;
@@ -75,17 +75,69 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
         return nullptr;
     }
 
-    unsigned int index = rand() % (possible.size());
+    unsigned int best = 0;
+    int bestWeight = calculateBoard(possible[best]);
+    for (unsigned int i = 1; i < possible.size(); i++){
+        if (bestWeight < calculateBoard(possible[i])){
+            best = i;
+            bestWeight = calculateBoard(possible[best]);
+        }
+    }
 
-    boardState->doMove(possible[index], ourSide);
-
-    for(unsigned int i = 0; i < possible.size(); i++)
-    {
-        if (i != index)
-        {
+    for (unsigned int i = 0; i < possible.size(); i++){
+        if (i != best){
             delete possible[i];
         }
     }
 
-    return possible[index];
+    boardState->doMove(possible[best], ourSide);
+    return possible[best];
+}
+
+int Player::calculateBoard(Move* move){
+    Board* copy = boardState->copy();
+    copy->doMove(move, ourSide);
+
+    int sum = 0;
+    for (unsigned int i = 0; i < 8; i++){
+        for (unsigned int j = 0; j < 8; j++){
+            if(copy->publicGet(ourSide, i, j)){
+                sum += calculateWeight(i, j);
+            }
+        }
+    }
+
+    if (!copy->hasMoves((ourSide == BLACK) ? WHITE : BLACK))
+    {
+        sum = ENDGAME;
+    }
+
+    delete copy;
+
+    return sum;
+}
+
+int Player::calculateWeight(int x, int y){
+    int weight = 1;
+    if(x % 7 == 0 || y % 7 == 0){ // edges
+        weight = 2;
+    }
+
+    if(x % 7 == 0 && y % 7 == 0){ // corners
+        weight = 10;
+    }
+
+    if(y % 7 == 0 && (x == 1 || x == 6)){ // next to corners
+        weight = -2;
+    }
+
+    if(x % 7 == 0 && (y == 1 || y == 6)){ // next to corners
+        weight = -2;
+    }
+
+    if((y == 1 || y == 6) && (x == 1 || x == 6)){ //very bad next to diag
+        weight = -6;
+    }
+
+    return weight;
 }
