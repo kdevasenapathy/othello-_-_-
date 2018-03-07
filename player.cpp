@@ -16,9 +16,6 @@ Player::Player(Side side) {
      */
     boardState = new Board;
     ourSide = side;
-    srand(time(NULL));
-
-
 }
 
 /*
@@ -46,52 +43,108 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
      * TODO: Implement how moves your AI should play here. You should first
      * process the opponent's opponents move before calculating your own move
      */
-    vector<Move*> possible;
-    
-    if (opponentsMove != nullptr)
+    if (!testingMinimax)
     {
-        Side other = (ourSide == BLACK) ? WHITE : BLACK;
-        boardState->doMove(opponentsMove, other);
-    }
-
-    for (int i = 0; i < 8; i++)
-    {
-        for (int j = 0; j < 8; j++)
+        vector<Move*> possible;
+        
+        if (opponentsMove != nullptr)
         {
-            Move* move = new Move(i, j);
-            if (boardState->checkMove(move, ourSide))
+            Side other = (ourSide == BLACK) ? WHITE : BLACK;
+            boardState->doMove(opponentsMove, other);
+        }
+
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 8; j++)
             {
-                possible.push_back(move);
-            }
-            else
-            {
-                delete move;
+                Move* move = new Move(i, j);
+                if (boardState->checkMove(move, ourSide))
+                {
+                    possible.push_back(move);
+                }
+                else
+                {
+                    delete move;
+                }
             }
         }
-    }
 
-    if (possible.size() == 0)
+        if (possible.size() == 0)
+        {
+            return nullptr;
+        }
+
+        unsigned int best = 0;
+        int bestWeight = calculateBoard(possible[best]);
+        for (unsigned int i = 1; i < possible.size(); i++){
+            if (bestWeight < calculateBoard(possible[i])){
+                best = i;
+                bestWeight = calculateBoard(possible[best]);
+            }
+        }
+
+        for (unsigned int i = 0; i < possible.size(); i++){
+            if (i != best){
+                delete possible[i];
+            }
+        }
+
+        boardState->doMove(possible[best], ourSide);
+        return possible[best];
+    }
+    else
     {
-        return nullptr;
-    }
-
-    unsigned int best = 0;
-    int bestWeight = calculateBoard(possible[best]);
-    for (unsigned int i = 1; i < possible.size(); i++){
-        if (bestWeight < calculateBoard(possible[i])){
-            best = i;
-            bestWeight = calculateBoard(possible[best]);
+        vector<Move*> possible;
+        
+        if (opponentsMove != nullptr)
+        {
+            Side other = (ourSide == BLACK) ? WHITE : BLACK;
+            boardState->doMove(opponentsMove, other);
         }
-    }
 
-    for (unsigned int i = 0; i < possible.size(); i++){
-        if (i != best){
-            delete possible[i];
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 8; j++)
+            {
+                Move* move = new Move(i, j);
+                if (boardState->checkMove(move, ourSide))
+                {
+                    possible.push_back(move);
+                }
+                else
+                {
+                    delete move;
+                }
+            }
         }
-    }
 
-    boardState->doMove(possible[best], ourSide);
-    return possible[best];
+        if (possible.size() == 0)
+        {
+            return nullptr;
+        }
+
+        unsigned int best = 0;
+        int bestWeight = -1 * ENDGAME;
+        for (unsigned int i = 0; i < possible.size(); i++)
+        {
+            Board* copy = boardState->copy();
+            copy->doMove(possible[i], ourSide);
+            int minimaxer = minimax(copy, ourSide, 0);
+            if (bestWeight < minimaxer){
+                best = i;
+                bestWeight = minimaxer;
+            }
+            delete copy;
+        }
+        for (unsigned int i = 0; i < possible.size(); i++){
+            if (i != best){
+                delete possible[i];
+            }
+        }
+
+        boardState->doMove(possible[best], ourSide);
+        return possible[best];
+    }
 }
 
 int Player::calculateBoard(Move* move){
@@ -140,4 +193,139 @@ int Player::calculateWeight(int x, int y){
     }
 
     return weight;
+}
+
+void Player::setBoard(char data[])
+{
+    if (testingMinimax)
+    {
+        boardState->setBoard(data);
+    }
+}
+
+int Player::naiveHeuristic(Move* move, Board* state)
+{
+    Board* copy = state->copy();
+    copy->doMove(move, ourSide);
+    Side other = (ourSide == BLACK) ? WHITE : BLACK;
+    int naive = copy->count(ourSide) - copy->count(other);
+
+    delete copy;
+    return naive;
+}
+
+int Player::minimax(Board* current, Side side, int currentDepth)
+{
+    if (side == ourSide)
+    {
+        vector<Move*> possible;
+
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 8; j++)
+            {
+                Move* move = new Move(i, j);
+                if (current->checkMove(move, side))
+                {
+                    possible.push_back(move);
+                }
+                else
+                {
+                    delete move;
+                }
+            }
+        }
+
+        if (possible.size() == 0)
+        {
+            return -1 * ENDGAME;
+        }
+
+        if (currentDepth == DEPTH)
+        {
+            int bestWeight = naiveHeuristic(possible[0], current);
+            for (unsigned int i = 1; i < possible.size(); i++)
+            {
+                if (bestWeight < naiveHeuristic(possible[i], current))
+                {
+                    bestWeight = naiveHeuristic(possible[i], current);
+                }
+                delete possible[i];
+            }
+            return bestWeight;
+        }
+        else
+        {
+            int bestWeight = -1* ENDGAME;
+            for (unsigned int i = 0; i < possible.size(); i++)
+            {
+                Board* copy = current->copy();
+                copy->doMove(possible[i], side);
+                int max = minimax(copy, (side == BLACK) ? WHITE : BLACK, currentDepth + 1);
+                if (bestWeight < max)
+                {
+                    bestWeight = max;
+                }
+                delete copy;
+                delete possible[i];
+            }
+            return bestWeight;
+        }
+    }
+    else
+    {
+        vector<Move*> possible;
+
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 8; j++)
+            {
+                Move* move = new Move(i, j);
+                if (current->checkMove(move, side))
+                {
+                    possible.push_back(move);
+                }
+                else
+                {
+                    delete move;
+                }
+            }
+        }
+
+        if (possible.size() == 0)
+        {
+            return ENDGAME;
+        }
+
+        if (currentDepth == DEPTH)
+        {
+            int worstWeight = naiveHeuristic(possible[0], current);
+            for (unsigned int i = 1; i < possible.size(); i++)
+            {
+                if (worstWeight > naiveHeuristic(possible[i], current))
+                {
+                    worstWeight = naiveHeuristic(possible[i], current);
+                }
+                delete possible[i];
+            }
+            return worstWeight;
+        }
+        else
+        {
+            int worstWeight = ENDGAME;
+            for (unsigned int i = 0; i < possible.size(); i++)
+            {
+                Board* copy = current->copy();
+                copy->doMove(possible[i], side);
+                int min = minimax(copy, (side == BLACK) ? WHITE : BLACK, currentDepth + 1);
+                if (worstWeight < min)
+                {
+                    worstWeight = min;
+                }
+                delete copy;
+                delete possible[i];
+            }
+            return worstWeight;
+        }
+    }
 }
