@@ -177,7 +177,7 @@ int Player::calculateWeight(int x, int y){
     }
 
     if(x % 7 == 0 && y % 7 == 0){ // corners
-        weight = 10;
+        weight = 9;
     }
 
     if(y % 7 == 0 && (x == 1 || x == 6)){ // next to corners
